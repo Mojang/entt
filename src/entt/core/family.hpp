@@ -19,18 +19,23 @@ namespace entt {
  */
 template<typename...>
 class Family {
-    static std::atomic<std::size_t> identifier;
+public:
+	/*! @brief Unsigned integer type. */
+	using family_type = std::uint32_t;
+
+private:
+    static std::atomic<family_type>& identifier() noexcept {
+		static std::atomic<family_type> id = 0;
+		return id;
+	}
 
     template<typename...>
-    static std::size_t family() noexcept {
-        static const std::size_t value = identifier.fetch_add(1);
+    static family_type family() noexcept {
+        static const family_type value = identifier().fetch_add(1);
         return value;
     }
 
 public:
-    /*! @brief Unsigned integer type. */
-    using family_type = std::size_t;
-
     /**
      * @brief Returns an unique identifier for the given type.
      * @return Statically generated unique identifier for the given type.
@@ -40,10 +45,6 @@ public:
         return family<std::decay_t<Type>...>();
     }
 };
-
-
-template<typename... Types>
-std::atomic<std::size_t> Family<Types...>::identifier{};
 
 
 }
