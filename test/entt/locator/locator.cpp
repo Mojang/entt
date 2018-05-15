@@ -46,4 +46,7 @@ TEST(ServiceLocator, Functionalities) {
     ServiceLocator<B>::ref().f(!ServiceLocator<B>::get().lock()->check);
 
     ASSERT_FALSE(ServiceLocator<B>::get().lock()->check);
+
+    ServiceLocator<A>::reset();
+    ServiceLocator<B>::reset();
 }
