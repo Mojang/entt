@@ -3,6 +3,7 @@
 
 using my_family = entt::Family<struct MyFamily>;
 using your_family = entt::Family<struct YourFamily>;
+using other_family = entt::Family<struct OtherFamily>;
 
 TEST(Family, Functionalities) {
     auto myFamilyType = my_family::type<struct MyFamilyType>();
@@ -16,7 +17,7 @@ TEST(Family, Functionalities) {
 }
 
 TEST(Family, Uniqueness) {
-    ASSERT_EQ(my_family::type<int>(), my_family::type<int &>());
-    ASSERT_EQ(my_family::type<int>(), my_family::type<int &&>());
-    ASSERT_EQ(my_family::type<int>(), my_family::type<const int &>());
+    ASSERT_EQ(other_family::type<int>(), other_family::type<int &>());
+    ASSERT_EQ(other_family::type<int>(), other_family::type<int &&>());
+    ASSERT_EQ(other_family::type<int>(), other_family::type<const int &>());
 }
