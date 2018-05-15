@@ -20,6 +20,8 @@
 
 namespace entt {
 
+template<typename Entity>
+class ViewDescriptor;
 
 /**
  * @brief Fast and reliable entity-component system.
@@ -33,8 +35,10 @@ namespace entt {
  */
 template<typename Entity>
 class Registry {
+public:
+	using component_family = Family<struct InternalRegistryComponentFamily>;
+private:
     using tag_family = Family<struct InternalRegistryTagFamily>;
-    using component_family = Family<struct InternalRegistryComponentFamily>;
     using view_family = Family<struct InternalRegistryViewFamily>;
     using traits_type = entt_traits<Entity>;
 
@@ -1305,6 +1309,14 @@ public:
         return { (*this = {}), assure };
     }
 
+	ViewDescriptor<entity_type> viewDescriptor()  {
+		return ViewDescriptor<entity_type>{pools};
+	}
+
+	DynamicView<entity_type> view(ViewDescriptor<entity_type>&& descriptor) {
+		return DynamicView<entity_type>{std::move(descriptor.selected)};
+	}
+
 private:
     std::vector<std::unique_ptr<SparseSet<Entity>>> handlers;
     std::vector<std::unique_ptr<SparseSet<Entity>>> pools;
@@ -1312,6 +1324,48 @@ private:
     std::vector<entity_type> entities;
     size_type available{};
     entity_type next{};
+};
+
+
+template<typename Entity>
+class ViewDescriptor {
+	using PoolVector = std::vector<std::unique_ptr<SparseSet<Entity>>>;
+
+public:
+	using entity_type = Entity;
+	using component_family = typename Registry<entity_type>::component_family;
+
+	void add(typename component_family::family_type ctype) {
+		if (managed(ctype)) {
+			if (selected.empty()) {
+				selected.push_back(pools[ctype].get());
+			}
+			else {
+				auto currentSize = selected.front()->size();
+				auto* newPool = pools[ctype].get();
+				auto newSize = newPool->size();
+				if (newSize < currentSize) {
+					selected.push_back(selected.front());
+					selected.front() = newPool;
+				}
+				else {
+					selected.push_back(newPool);
+				}
+			}
+		}
+	}
+
+private:
+	ViewDescriptor(PoolVector& p) : pools(p) {}
+
+	friend class Registry<entity_type>;
+
+	bool managed(typename component_family::family_type ctype) const noexcept {
+		return ctype < pools.size() && pools[ctype];
+	}
+
+	PoolVector& pools;
+	std::vector<SparseSet<Entity>*> selected;
 };
 
 

@@ -64,8 +64,12 @@ class SparseSet<Entity> {
         using reference = value_type;
         using iterator_category = std::input_iterator_tag;
 
+		explicit Iterator()
+			: direct{nullptr}, pos{0}
+		{}
+		
         Iterator(const std::vector<value_type> &direct, std::size_t pos)
-            : direct{direct}, pos{pos}
+            : direct{&direct}, pos{pos}
         {}
 
         Iterator & operator++() noexcept {
@@ -95,11 +99,11 @@ class SparseSet<Entity> {
         }
 
         reference operator*() const noexcept {
-            return direct[pos-1];
+            return (*direct)[pos-1];
         }
 
     private:
-        const std::vector<value_type> &direct;
+        const std::vector<value_type> *direct;
         std::size_t pos;
     };
 

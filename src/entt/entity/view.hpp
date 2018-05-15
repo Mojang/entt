@@ -333,7 +333,7 @@ private:
  * reference to the smallest set of candidate entities in order to get a
  * performance boost when iterate.<br/>
  * Order of elements during iterations are highly dependent on the order of the
- * underlying data strctures. See SparseSet and its specializations for more
+ * underlying data structures. See SparseSet and its specializations for more
  * details.
  *
  * @b Important
@@ -1119,6 +1119,184 @@ public:
 
 private:
     pool_type &pool;
+};
+
+
+/**
+ * @brief Multi component view, dynamically built at runtime.
+ *
+ * Multi component views iterate over those entities that have at least all the
+ * given components in their bags. During initialization, a multi component view
+ * looks at the number of entities available for each component and picks up a
+ * reference to the smallest set of candidate entities in order to get a
+ * performance boost when iterate.<br/>
+ * Order of elements during iterations are highly dependent on the order of the
+ * underlying data structures. See SparseSet and its specializations for more
+ * details.
+ *
+ * @b Important
+ *
+ * Iterators aren't invalidated if:
+ *
+ * * New instances of the given components are created and assigned to entities.
+ * * The entity currently pointed is modified (as an example, if one of the
+ * given components is removed from the entity to which the iterator points).
+ *
+ * In all the other cases, modify the pools of the given components somehow
+ * invalidates all the iterators and using them results in undefined behavior.
+ *
+ * @note
+ * Views share references to the underlying data structures with the Registry
+ * that generated them. Therefore any change to the entities and to the
+ * components made by means of the registry are immediately reflected by views.
+ *
+ * @warning
+ * Lifetime of a view must overcome the one of the registry that generated it.
+ * In any other case, attempting to use a view results in undefined behavior.
+ *
+ * @sa View<Entity, Component>
+ * @sa PersistentView
+ *
+ * @tparam Entity A valid entity type (see entt_traits for more details).
+ */
+template<typename Entity>
+class DynamicView final {
+    using base_pool_type = SparseSet<Entity>;
+	using pools_type = std::vector<base_pool_type*>;
+    using underlying_iterator_type = typename base_pool_type::iterator_type;
+
+    class Iterator {
+        inline bool valid() const noexcept {
+			auto entity = *begin;
+			for (auto&& pool : pools) {
+				if (!pool->has(entity)) {
+					return false;
+				}
+			}
+            return true;
+        }
+
+    public:
+        using value_type = typename base_pool_type::entity_type;
+
+        Iterator(const pools_type &pools, underlying_iterator_type begin, underlying_iterator_type end) noexcept
+            : pools{pools}, begin{begin}, end{end}
+        {
+            if(begin != end && !valid()) {
+                ++(*this);
+            }
+        }
+
+        Iterator & operator++() noexcept {
+            ++begin;
+            while(begin != end && !valid()) { ++begin; }
+            return *this;
+        }
+
+        Iterator operator++(int) noexcept {
+            Iterator orig = *this;
+            return ++(*this), orig;
+        }
+
+        bool operator==(const Iterator &other) const noexcept {
+            return other.begin == begin;
+        }
+
+        bool operator!=(const Iterator &other) const noexcept {
+            return !(*this == other);
+        }
+
+        value_type operator*() const noexcept {
+            return *begin;
+        }
+
+    private:
+        const pools_type &pools;
+        underlying_iterator_type begin;
+        underlying_iterator_type end;
+    };
+
+public:
+    /*! Input iterator type. */
+    using iterator_type = Iterator;
+    /*! @brief Underlying entity identifier. */
+    using entity_type = typename base_pool_type::entity_type;
+    /*! @brief Unsigned integer type. */
+    using size_type = typename base_pool_type::size_type;
+
+    /**
+     * @brief Constructs a view out of a view descriptor.
+     * @param pool A reference to a pool of components.
+     * @param other Other references to pools of components.
+     */
+    explicit DynamicView(pools_type&& pools) noexcept
+        : pools{std::move(pools)}
+    {
+    }
+
+    /**
+     * @brief Returns an iterator to the first entity that has the given
+     * components.
+     *
+     * The returned iterator points to the first entity that has the given
+     * components. If the view is empty, the returned iterator will be equal to
+     * `end()`.
+     *
+     * @note
+     * Input iterators stay true to the order imposed to the underlying data
+     * structures.
+     *
+     * @return An iterator to the first entity that has the given components.
+     */
+    iterator_type begin() const noexcept {
+		return Iterator{ pools,
+			pools.empty() ? underlying_iterator_type{} : pools.front()->begin(),
+			pools.empty() ? underlying_iterator_type{} : pools.front()->end() };
+    }
+
+    /**
+     * @brief Returns an iterator that is past the last entity that has the
+     * given components.
+     *
+     * The returned iterator points to the entity following the last entity that
+     * has the given components. Attempting to dereference the returned iterator
+     * results in undefined behavior.
+     *
+     * @note
+     * Input iterators stay true to the order imposed to the underlying data
+     * structures.
+     *
+     * @return An iterator to the entity following the last entity that has the
+     * given components.
+     */
+    iterator_type end() const noexcept {
+		underlying_iterator_type end = pools.empty() ? underlying_iterator_type{} : pools.front()->end();
+        return Iterator{pools, end, end};
+    }
+
+    /**
+     * @brief Iterate the entities and applies them the given function object.
+     *
+     * The function object is invoked for each entity. It is provided with the
+     * entity itself.<br/>
+     * The signature of the function should be equivalent to the following:
+     *
+     * @code{.cpp}
+     * void(entity_type);
+     * @endcode
+     *
+     * @tparam Func Type of the function object to invoke.
+     * @param func A valid function object.
+     */
+    template<typename Func>
+    void each(Func &&func) const {
+        for(auto entity: *this) {
+            std::forward<Func>(func)(entity);
+        }
+    }
+
+private:
+	pools_type pools;
 };
 
 
