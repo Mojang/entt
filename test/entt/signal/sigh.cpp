@@ -18,11 +18,15 @@ TEST(SigH, Lifetime) {
     ASSERT_NO_THROW(delete new signal{});
 }
 
+// externally visible variable to prevent comdat optimization
+extern int sigh_bitbucket;
+int sigh_bitbucket = 0;
+
 TEST(SigH, Comparison) {
     struct S {
-        void f() {}
-        void g() {}
-    };
+		void f() { sigh_bitbucket += 1; }
+		void g() { sigh_bitbucket += 2; }
+	};
 
     entt::SigH<void()> sig1;
     entt::SigH<void()> sig2;
@@ -164,7 +168,7 @@ template<typename Ret>
 struct TestCollectAll {
     std::vector<Ret> vec{};
     static int f() { return 42; }
-    static int g() { return 42; }
+    static int g() { return 43; }
     bool operator()(Ret r) noexcept {
         vec.push_back(r);
         return true;

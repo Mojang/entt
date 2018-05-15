@@ -27,10 +27,14 @@ TEST(Signal, Lifetime) {
     ASSERT_NO_THROW(delete new signal{});
 }
 
+// externally visible variable to prevent comdat optimization
+extern int signal_bitbucket;
+int signal_bitbucket = 0;
+
 TEST(Signal, Comparison) {
     struct S {
-        void f() {}
-        void g() {}
+		void f() { signal_bitbucket += 1; }
+		void g() { signal_bitbucket += 2; }
     };
 
     entt::Signal<void()> sig1;
