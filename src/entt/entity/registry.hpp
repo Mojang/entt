@@ -36,7 +36,7 @@ class ViewDescriptor;
 template<typename Entity>
 class Registry {
 public:
-	using component_family = Family<struct InternalRegistryComponentFamily>;
+    using component_family = Family<struct InternalRegistryComponentFamily>;
 private:
     using tag_family = Family<struct InternalRegistryTagFamily>;
     using view_family = Family<struct InternalRegistryViewFamily>;
@@ -100,12 +100,22 @@ private:
         std::vector<std::pair<SparseSet<Entity> *, test_fn_type>> listeners;
     };
 
+    bool managed(component_family::family_type ctype) const noexcept {
+        return ctype < pools.size() && pools[ctype];
+    }
+    
     template<typename Component>
     bool managed() const noexcept {
         const auto ctype = component_family::type<Component>();
-        return ctype < pools.size() && pools[ctype];
+        return managed(ctype);
     }
 
+    template<typename Component>
+    const Pool<Component> & pool(component_family::family_type ctype) const noexcept {
+        assert(managed(ctype));
+        return static_cast<Pool<Component> &>(*pools[ctype]);
+    }
+    
     template<typename Component>
     const Pool<Component> & pool() const noexcept {
         assert(managed<Component>());
@@ -113,23 +123,38 @@ private:
     }
 
     template<typename Component>
+    Pool<Component> & pool(component_family::family_type ctype) noexcept {
+        assert(managed(ctype));
+        return const_cast<Pool<Component> &>(const_cast<const Registry *>(this)->pool<Component>(ctype));
+    }
+
+    template<typename Component>
     Pool<Component> & pool() noexcept {
         return const_cast<Pool<Component> &>(const_cast<const Registry *>(this)->pool<Component>());
+    }
+
+    SparseSet<Entity>& generic_pool(component_family::family_type type) noexcept {
+        assert(managed(type));
+        return *pools[type];
+    }
+
+    template <typename Component>
+    Pool<Component> & assure(component_family::family_type ctype) {
+        if (!(ctype < pools.size())) {
+            pools.resize(ctype + 1);
+        }
+
+        if (!pools[ctype]) {
+            pools[ctype] = std::make_unique<Pool<Component>>();
+        }
+
+        return pool<Component>(ctype);
     }
 
     template<typename Component>
     Pool<Component> & assure() {
         const auto ctype = component_family::type<Component>();
-
-        if(!(ctype < pools.size())) {
-            pools.resize(ctype + 1);
-        }
-
-        if(!pools[ctype]) {
-            pools[ctype] = std::make_unique<Pool<Component>>();
-        }
-
-        return pool<Component>();
+        return assure<Component>(ctype);
     }
 
     template<typename... Component>
@@ -644,25 +669,25 @@ public:
         return tags[tag_family::type<Tag>()]->entity;
     }
 
-	/** 
-	 * @brief Creates a new entity with a copy of all Components it has.
-	 * which REQUIRES components to have a properly functioning copy-constructor.
-	 *
-	 * @param from the entity to copy components from.
-	 */
-	entity_type clone(entity_type from) {
-		assert(valid(from));
+    /** 
+     * @brief Creates a new entity with a copy of all Components it has.
+     * which REQUIRES components to have a properly functioning copy-constructor.
+     *
+     * @param from the entity to copy components from.
+     */
+    entity_type clone(entity_type from) {
+        assert(valid(from));
 
-		entity_type to = create();
-		for (auto &&cpool : pools) {
-			if (cpool && cpool->has(from)) {
-				cpool->copy(to, from);
-			}
-		}
+        entity_type to = create();
+        for (auto &&cpool : pools) {
+            if (cpool && cpool->has(from)) {
+                cpool->copy(to, from);
+            }
+        }
 
-		return to;
-	}
-	
+        return to;
+    }
+    
     /**
      * @brief Assigns the given component to an entity.
      *
@@ -689,6 +714,13 @@ public:
         return assure<Component>().construct(*this, entity, std::forward<Args>(args)...);
     }
 
+    template<typename Component, typename... Args>
+    Component & assign_specific(entity_type entity, component_family::family_type type, Args&&... args) {
+        assert(valid(entity));
+        return assure<Component>(type).construct(*this, entity, std::forward<Args>(args)...);
+    }
+
+
     /**
      * @brief Removes the given component from an entity.
      *
@@ -706,6 +738,11 @@ public:
     void remove(entity_type entity) {
         assert(valid(entity));
         pool<Component>().destroy(entity);
+    }
+
+    void remove(entity_type entity, component_family::family_type type) {
+        assert(valid(entity));
+        return generic_pool(type).destroy(entity);
     }
 
     /**
@@ -730,6 +767,11 @@ public:
         return all;
     }
 
+    bool has(entity_type entity, component_family::family_type ctype) {
+        assert(valid(entity));
+        return managed(ctype) && pools[ctype]->has(entity);
+    }
+
     /**
      * @brief Returns a reference to the given component for an entity.
      *
@@ -750,6 +792,12 @@ public:
         return pool<Component>().get(entity);
     }
 
+    template<typename Component>
+    const Component & get_specific(entity_type entity, component_family::family_type type) const noexcept {
+        assert(valid(entity));
+        return pool<Component>(type).get(entity);
+    }
+
     /**
      * @brief Returns a reference to the given component for an entity.
      *
@@ -767,6 +815,11 @@ public:
     template<typename Component>
     Component & get(entity_type entity) noexcept {
         return const_cast<Component &>(const_cast<const Registry *>(this)->get<Component>(entity));
+    }
+
+    template<typename Component>
+    Component & get_specific(entity_type entity, component_family::family_type type) noexcept {
+        return const_cast<Component &>(const_cast<const Registry *>(this)->get_specific<Component>(entity, type));
     }
 
     /**
@@ -1328,13 +1381,13 @@ public:
         return { (*this = {}), assure };
     }
 
-	ViewDescriptor<entity_type> viewDescriptor()  {
-		return ViewDescriptor<entity_type>{pools};
-	}
+    ViewDescriptor<entity_type> viewDescriptor()  {
+        return ViewDescriptor<entity_type>{pools};
+    }
 
-	DynamicView<entity_type> view(ViewDescriptor<entity_type>&& descriptor) {
-		return DynamicView<entity_type>{std::move(descriptor.selected)};
-	}
+    DynamicView<entity_type> view(ViewDescriptor<entity_type>&& descriptor) {
+        return DynamicView<entity_type>{std::move(descriptor.selected)};
+    }
 
 private:
     std::vector<std::unique_ptr<SparseSet<Entity>>> handlers;
@@ -1348,43 +1401,43 @@ private:
 
 template<typename Entity>
 class ViewDescriptor {
-	using PoolVector = std::vector<std::unique_ptr<SparseSet<Entity>>>;
+    using PoolVector = std::vector<std::unique_ptr<SparseSet<Entity>>>;
 
 public:
-	using entity_type = Entity;
-	using component_family = typename Registry<entity_type>::component_family;
+    using entity_type = Entity;
+    using component_family = typename Registry<entity_type>::component_family;
 
-	void add(typename component_family::family_type ctype) {
-		if (managed(ctype)) {
-			if (selected.empty()) {
-				selected.push_back(pools[ctype].get());
-			}
-			else {
-				auto currentSize = selected.front()->size();
-				auto* newPool = pools[ctype].get();
-				auto newSize = newPool->size();
-				if (newSize < currentSize) {
-					selected.push_back(selected.front());
-					selected.front() = newPool;
-				}
-				else {
-					selected.push_back(newPool);
-				}
-			}
-		}
-	}
+    void add(typename component_family::family_type ctype) {
+        if (managed(ctype)) {
+            if (selected.empty()) {
+                selected.push_back(pools[ctype].get());
+            }
+            else {
+                auto currentSize = selected.front()->size();
+                auto* newPool = pools[ctype].get();
+                auto newSize = newPool->size();
+                if (newSize < currentSize) {
+                    selected.push_back(selected.front());
+                    selected.front() = newPool;
+                }
+                else {
+                    selected.push_back(newPool);
+                }
+            }
+        }
+    }
 
 private:
-	ViewDescriptor(PoolVector& p) : pools(p) {}
+    ViewDescriptor(PoolVector& p) : pools(p) {}
 
-	friend class Registry<entity_type>;
+    friend class Registry<entity_type>;
 
-	bool managed(typename component_family::family_type ctype) const noexcept {
-		return ctype < pools.size() && pools[ctype];
-	}
+    bool managed(typename component_family::family_type ctype) const noexcept {
+        return ctype < pools.size() && pools[ctype];
+    }
 
-	PoolVector& pools;
-	std::vector<SparseSet<Entity>*> selected;
+    PoolVector& pools;
+    std::vector<SparseSet<Entity>*> selected;
 };
 
 

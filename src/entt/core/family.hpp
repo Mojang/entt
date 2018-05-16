@@ -25,7 +25,7 @@ public:
 
 private:
     static std::atomic<family_type>& identifier() noexcept {
-		static std::atomic<family_type> id = 0;
+		static std::atomic<family_type> id{0};
 		return id;
 	}
 
@@ -44,6 +44,10 @@ public:
     inline static family_type type() noexcept {
         return family<std::decay_t<Type>...>();
     }
+	
+	static family_type max() noexcept {
+		return identifier();
+	}
 };
 
 

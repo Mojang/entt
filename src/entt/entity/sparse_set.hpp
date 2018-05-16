@@ -64,10 +64,10 @@ class SparseSet<Entity> {
         using reference = value_type;
         using iterator_category = std::input_iterator_tag;
 
-		explicit Iterator()
-			: direct{nullptr}, pos{0}
-		{}
-		
+        explicit Iterator()
+            : direct{nullptr}, pos{0}
+        {}
+        
         Iterator(const std::vector<value_type> &direct, std::size_t pos)
             : direct{&direct}, pos{pos}
         {}
@@ -338,11 +338,11 @@ public:
         direct.pop_back();
     }
 
-	virtual void copy(entity_type to, entity_type from) {
-		UNUSED_VARIABLE(to);
-		UNUSED_VARIABLE(from);
-		assert(false);
-	}
+    virtual void copy(entity_type to, entity_type from) {
+        (void) to;
+        (void) from;
+        assert(false);
+    }
 
     /**
      * @brief Swaps the position of two entities in the internal packed array.
@@ -359,7 +359,7 @@ public:
      * @param lhs A valid position within the sparse set.
      * @param rhs A valid position within the sparse set.
      */
-    void swap(pos_type lhs, pos_type rhs) noexcept {
+    virtual void swap(pos_type lhs, pos_type rhs) noexcept {
         assert(lhs < direct.size());
         assert(rhs < direct.size());
         const auto src = direct[lhs] & traits_type::entity_mask;
@@ -714,10 +714,10 @@ public:
         underlying_type::destroy(entity);
     }
 
-	virtual void copy(entity_type to, entity_type from) override {
-		construct(to, instances[underlying_type::get(from)]);
-	}
-	
+    virtual void copy(entity_type to, entity_type from) final {
+        construct(to, instances[underlying_type::get(from)]);
+    }
+    
     /**
      * @brief Sort components according to the given comparison function.
      *
@@ -812,11 +812,32 @@ public:
             ++from;
         }
     }
+    
+    /**
+     * @brief Swaps the two entities and their objects.
+     *
+     * @note
+     * This function doesn't swap objects between entities. It exchanges entity
+     * and object positions in the sparse set. It's used mainly for sorting.
+     *
+     * @warning
+     * Attempting to use entities that don't belong to the sparse set results
+     * in undefined behavior.<br/>
+     * An assertion will abort the execution at runtime in debug mode if the
+     * sparse set doesn't contain the given entities.
+     *
+     * @param lhs A valid entity identifier.
+     * @param rhs A valid entity identifier.
+     */
+    void swap(entity_type lhs, entity_type rhs) noexcept final {
+        std::swap(instances[underlying_type::get(lhs)], instances[underlying_type::get(rhs)]);
+        underlying_type::swap(lhs, rhs);
+    }
 
     /**
      * @brief Resets a sparse set.
      */
-    void reset() override {
+    void reset() final {
         underlying_type::reset();
         instances.clear();
     }
