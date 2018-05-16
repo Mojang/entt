@@ -644,6 +644,25 @@ public:
         return tags[tag_family::type<Tag>()]->entity;
     }
 
+	/** 
+	 * @brief Creates a new entity with a copy of all Components it has.
+	 * which REQUIRES components to have a properly functioning copy-constructor.
+	 *
+	 * @param from the entity to copy components from.
+	 */
+	entity_type clone(entity_type from) {
+		assert(valid(from));
+
+		entity_type to = create();
+		for (auto &&cpool : pools) {
+			if (cpool && cpool->has(from)) {
+				cpool->copy(to, from);
+			}
+		}
+
+		return to;
+	}
+	
     /**
      * @brief Assigns the given component to an entity.
      *

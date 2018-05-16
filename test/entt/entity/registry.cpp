@@ -404,6 +404,26 @@ TEST(DefaultRegistry, CleanTagsAfterReset) {
     ASSERT_FALSE(registry.has<int>());
 }
 
+TEST(DefaultRegistry, CloneEntities) {
+	entt::DefaultRegistry registry;
+	auto pre = registry.create<int>();
+	registry.accomodate<int>(pre, 0);
+	
+	//change value.
+	registry.get<int>(pre) = 1;
+	ASSERT_EQ(registry.get<int>(pre), 1);
+
+	//clone entity.
+	auto post = registry.clone(pre);
+	ASSERT_NE(post, pre);
+	ASSERT_EQ(registry.get<int>(pre), 1);
+	ASSERT_EQ(registry.get<int>(post), 1);
+
+	// change post component value
+	registry.get<int>(post) = 2;
+	ASSERT_NE(registry.get<int>(pre), registry.get<int>(post));
+}
+
 TEST(DefaultRegistry, SortSingle) {
     entt::DefaultRegistry registry;
 

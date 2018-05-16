@@ -338,6 +338,12 @@ public:
         direct.pop_back();
     }
 
+	virtual void copy(entity_type to, entity_type from) {
+		UNUSED_VARIABLE(to);
+		UNUSED_VARIABLE(from);
+		assert(false);
+	}
+
     /**
      * @brief Swaps the position of two entities in the internal packed array.
      *
@@ -708,6 +714,10 @@ public:
         underlying_type::destroy(entity);
     }
 
+	virtual void copy(entity_type to, entity_type from) override {
+		construct(to, instances[underlying_type::get(from)]);
+	}
+	
     /**
      * @brief Sort components according to the given comparison function.
      *
