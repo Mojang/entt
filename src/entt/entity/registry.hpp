@@ -463,7 +463,7 @@ public:
         assert(valid(entity));
         const auto entt = entity & traits_type::entity_mask;
         const auto version = (((entity >> traits_type::entity_shift) + 1) & traits_type::version_mask) << traits_type::entity_shift;
-        const auto node = (available ? next : ((entt + 1) & traits_type::entity_mask)) | version;
+        const auto node = (available ? next : static_cast<entity_type>((entt + 1) & traits_type::entity_mask)) | version;
 
         entities[entt] = node;
         next = entt;
