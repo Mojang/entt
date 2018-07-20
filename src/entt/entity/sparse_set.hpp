@@ -103,7 +103,9 @@ class SparseSet<Entity> {
         std::size_t pos;
     };
 
-    static constexpr Entity in_use = (Entity{1} << traits_type::entity_shift);
+    static constexpr Entity in_use() noexcept {
+		return Entity{1} << traits_type::entity_shift;
+	}
 
 public:
     /*! @brief Underlying entity identifier. */
@@ -239,7 +241,7 @@ public:
     bool has(entity_type entity) const noexcept {
         const auto pos = size_type(entity & traits_type::entity_mask);
         // the in-use control bit permits to avoid accessing the direct vector
-        return (pos < reverse.size()) && (reverse[pos] & in_use);
+        return (pos < reverse.size()) && (reverse[pos] & in_use());
     }
 
     /**
@@ -263,7 +265,7 @@ public:
         const auto pos = size_type(entity & traits_type::entity_mask);
         assert(pos < reverse.size());
         // the in-use control bit permits to avoid accessing the direct vector
-        return (reverse[pos] & in_use);
+        return (reverse[pos] & in_use());
     }
 
     /**
@@ -306,7 +308,7 @@ public:
 
         // we exploit the fact that pos_type is equal to entity_type and pos has
         // traits_type::version_mask bits unused we can use to mark it as in-use
-        reverse[pos] = pos_type(direct.size()) | in_use;
+        reverse[pos] = pos_type(direct.size()) | in_use();
         direct.emplace_back(entity);
     }
 
