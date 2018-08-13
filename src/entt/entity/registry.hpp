@@ -999,7 +999,7 @@ public:
             for(auto pos = entities.size(); pos; --pos) {
                 const entity_type curr = pos - 1;
                 const auto entity = entities[curr];
-                const auto entt = entity & traits_type::entity_mask;
+                const entity_type entt = entity & traits_type::entity_mask;
 
                 if(curr == entt) {
                     func(entity);
