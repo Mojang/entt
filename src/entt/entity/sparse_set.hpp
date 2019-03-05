@@ -13,6 +13,12 @@
 #include "entt_traits.hpp"
 
 
+#if defined(COMPILER_NO_DEFAULT_NOEXCEPT)
+#define NO_EXCEPT
+#else
+#define NO_EXCEPT noexcept
+#endif
+
 namespace entt {
 
 
@@ -118,7 +124,7 @@ public:
     using iterator_type = Iterator;
 
     /*! @brief Default constructor. */
-    SparseSet() noexcept = default;
+    SparseSet() NO_EXCEPT = default;
 
     /*! @brief Default destructor. */
     virtual ~SparseSet() noexcept = default;
@@ -501,7 +507,7 @@ public:
     using iterator_type = Iterator;
 
     /*! @brief Default constructor. */
-    SparseSet() noexcept = default;
+    SparseSet() NO_EXCEPT = default;
 
     /*! @brief Copying a sparse set isn't allowed. */
     SparseSet(const SparseSet &) = delete;
