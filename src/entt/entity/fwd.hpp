@@ -55,8 +55,14 @@ ENTT_OPAQUE_TYPE(entity, ENTT_ID_TYPE)
 /*! @brief Alias declaration for the most common use case. */
 ENTT_OPAQUE_TYPE(component, ENTT_ID_TYPE)
 
+constexpr auto to_integer(uint32_t id) ENTT_NOEXCEPT {
+	return id;
+}
+
 /*! @brief Alias declaration for the most common use case. */
 using registry = basic_registry<entity>;
+
+using DefaultRegistry = basic_registry<uint32_t>; //@GENOA BAD
 
 /*! @brief Alias declaration for the most common use case. */
 using observer = basic_observer<entity>;
@@ -93,6 +99,9 @@ using runtime_view = basic_runtime_view<entity>;
 template<typename... Types>
 using group = basic_group<entity, Types...>;
 
+
+template<>
+struct entt_traits<::entt::entity> : public entt_traits<std::uint32_t> {};
 
 }
 

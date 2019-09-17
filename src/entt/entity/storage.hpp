@@ -50,7 +50,7 @@ namespace entt {
 template<typename Entity, typename Type, typename = std::void_t<>>
 class basic_storage: public sparse_set<Entity> {
     using underlying_type = sparse_set<Entity>;
-    using traits_type = entt_traits<std::underlying_type_t<Entity>>;
+    using traits_type = entt_traits<Entity>;
 
     template<bool Const>
     class iterator {
@@ -493,7 +493,7 @@ private:
 /*! @copydoc basic_storage */
 template<typename Entity, typename Type>
 class basic_storage<Entity, Type, std::enable_if_t<std::is_empty_v<Type>>>: public sparse_set<Entity> {
-    using traits_type = entt_traits<std::underlying_type_t<Entity>>;
+    using traits_type = entt_traits<Entity>;
     using underlying_type = sparse_set<Entity>;
 
     class iterator {
@@ -668,6 +668,20 @@ public:
         ENTT_ASSERT(underlying_type::has(entt));
         return {};
     }
+
+	/**
+	 * @brief Returns a pointer to the object associated with an entity, if any.
+	 * @param entt A valid entity identifier.
+	 * @return The object associated with the entity, if any.
+	 */
+	const object_type * try_get(const entity_type entt) const ENTT_NOEXCEPT {
+		return underlying_type::has(entt) ? (const object_type *)this : nullptr;
+	}
+
+	/*! @copydoc try_get */
+	object_type * try_get(const entity_type entt) ENTT_NOEXCEPT {
+		return underlying_type::has(entt) ? (object_type *)this : nullptr;
+	}
 
     /**
      * @brief Assigns one or more entities to a storage.

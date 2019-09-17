@@ -1,7 +1,6 @@
 #ifndef ENTT_ENTITY_REGISTRY_HPP
 #define ENTT_ENTITY_REGISTRY_HPP
 
-
 #include <tuple>
 #include <vector>
 #include <memory>
@@ -27,8 +26,10 @@
 #include "fwd.hpp"
 
 
-namespace entt {
+#pragma warning( push )
+#pragma warning( disable : 4458 )
 
+namespace entt {
 
 /**
  * @brief Fast and reliable entity-component system.
@@ -44,14 +45,14 @@ template<typename Entity>
 class basic_registry {
     using context_family = family<struct internal_registry_context_family>;
     using component_family = family<struct internal_registry_component_family>;
-    using traits_type = entt_traits<std::underlying_type_t<Entity>>;
+    using traits_type = entt_traits<Entity>;
 
     struct group_type {
         std::size_t owned{};
     };
 
     template<typename Component>
-    struct pool_handler: storage<Entity, Component> {
+    struct pool_handler : storage<Entity, Component> {
         group_type *group{};
 
         pool_handler() ENTT_NOEXCEPT = default;
@@ -213,7 +214,7 @@ class basic_registry {
         if constexpr(is_named_type_v<Type>) {
             return named_type_traits<Type>::value;
         } else {
-            return Family::template type<Type>;
+            return Family::template type<Type>();
         }
     }
 
@@ -1843,5 +1844,6 @@ private:
 
 }
 
+#pragma warning( pop )
 
 #endif // ENTT_ENTITY_REGISTRY_HPP

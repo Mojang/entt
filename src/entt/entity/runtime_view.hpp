@@ -61,7 +61,7 @@ class basic_runtime_view {
     friend class basic_registry<Entity>;
 
     using underlying_iterator_type = typename sparse_set<Entity>::iterator_type;
-    using traits_type = entt_traits<std::underlying_type_t<Entity>>;
+    using traits_type = entt_traits<Entity>;
 
     class iterator {
         friend class basic_runtime_view<Entity>;

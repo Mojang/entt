@@ -18,22 +18,31 @@ namespace entt {
  */
 template<typename...>
 class family {
-    inline static ENTT_MAYBE_ATOMIC(ENTT_ID_TYPE) identifier;
-
-    template<typename...>
-    // clang (since version 9) started to complain if auto is used instead of ENTT_ID_TYPE
-    inline static const ENTT_ID_TYPE inner = identifier++;
 
 public:
-    /*! @brief Unsigned integer type. */
-    using family_type = ENTT_ID_TYPE;
+	/*! @brief Unsigned integer type. */
+	using family_type = ENTT_ID_TYPE;
 
-    /*! @brief Statically generated unique identifier for the given type. */
-    template<typename... Type>
-    // at the time I'm writing, clang crashes during compilation if auto is used instead of family_type
-    inline static const family_type type = inner<std::decay_t<Type>...>;
+
+private:
+    inline static ENTT_MAYBE_ATOMIC(ENTT_ID_TYPE) identifier;
+
+	template<typename...>
+	static family_type family_id() {
+		static const family_type value = identifier++;
+		return value;
+	}
+
+public:
+
+	template<typename... Type>
+	inline static family_type type() {
+		return family_id<std::decay_t<Type>...>();
+	}
 };
 
+template<typename... Types>
+ENTT_MAYBE_ATOMIC(ENTT_ID_TYPE) family<Types...>::identifier{};
 
 }
 

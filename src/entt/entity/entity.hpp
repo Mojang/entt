@@ -109,7 +109,7 @@ namespace internal {
 
 class null {
     template<typename Entity>
-    using traits_type = entt_traits<std::underlying_type_t<Entity>>;
+    using traits_type = entt_traits<Entity>;
 
 public:
     template<typename Entity>

@@ -32,7 +32,7 @@ class basic_snapshot {
     friend class basic_registry<Entity>;
 
     using follow_fn_type = Entity(const basic_registry<Entity> &, const Entity);
-    using traits_type = entt_traits<std::underlying_type_t<Entity>>;
+    using traits_type = entt_traits<Entity>;
 
     basic_snapshot(const basic_registry<Entity> *source, Entity init, follow_fn_type *fn) ENTT_NOEXCEPT
         : reg{source},
@@ -200,7 +200,7 @@ class basic_snapshot_loader {
     friend class basic_registry<Entity>;
 
     using force_fn_type = void(basic_registry<Entity> &, const Entity, const bool);
-    using traits_type = entt_traits<std::underlying_type_t<Entity>>;
+    using traits_type = entt_traits<Entity>;
 
     basic_snapshot_loader(basic_registry<Entity> *source, force_fn_type *fn) ENTT_NOEXCEPT
         : reg{source},
@@ -346,7 +346,7 @@ private:
  */
 template<typename Entity>
 class basic_continuous_loader {
-    using traits_type = entt_traits<std::underlying_type_t<Entity>>;
+    using traits_type = entt_traits<Entity>;
 
     void destroy(Entity entt) {
         const auto it = remloc.find(entt);

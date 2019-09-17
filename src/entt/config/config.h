@@ -38,7 +38,9 @@
 
 #ifndef ENTT_DISABLE_ASSERT
 #include <cassert>
-#define ENTT_ASSERT(condition) assert(condition)
+#define ENTT_STR(str) #str
+#define ENTT_ASSERT(condition) DEBUG_ASSERT(condition, ENTT_STR(condition) " failed!")
+//#define ENTT_ASSERT(...) ((void)0)
 #else // ENTT_DISABLE_ASSERT
 #define ENTT_ASSERT(...) ((void)0)
 #endif // ENTT_DISABLE_ASSERT
