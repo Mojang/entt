@@ -169,7 +169,9 @@ public:
     using component_type = typename component_family::family_type;
 
     /*! @brief Default constructor. */
-    Registry() = default;
+	Registry() {
+		entities.emplace_back(entity_type((traits_type::version_mask << traits_type::entity_shift) | traits_type::entity_mask));
+	}
 
     /*! @brief Copying a registry isn't allowed. */
     Registry(const Registry &) = delete;
@@ -996,7 +998,7 @@ public:
     template<typename Func>
     void each(Func func) const {
         if(available) {
-            for(auto pos = entities.size(); pos; --pos) {
+            for(auto pos = entities.size(); pos > 1; --pos) {
                 const entity_type curr = static_cast<entity_type>(pos - 1);
                 const auto entity = entities[curr];
                 const entity_type entt = entity & traits_type::entity_mask;
@@ -1006,7 +1008,7 @@ public:
                 }
             }
         } else {
-            for(auto pos = entities.size(); pos; --pos) {
+            for(auto pos = entities.size(); pos > 1; --pos) {
                 func(entities[pos-1]);
             }
         }
