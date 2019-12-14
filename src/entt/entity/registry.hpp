@@ -232,7 +232,7 @@ public:
      * @return Number of entities still in use.
      */
     size_type size() const noexcept {
-        return entities.size() - available;
+        return entities.size() - available - 1;
     }
 
     /**
@@ -266,7 +266,7 @@ public:
      * @return Number of entities ever created.
      */
     size_type capacity() const noexcept {
-        return entities.size();
+        return entities.size() - 1;
     }
 
     /**
@@ -285,7 +285,7 @@ public:
      * @return True if at least an entity is still in use, false otherwise.
      */
     bool empty() const noexcept {
-        return entities.size() == available;
+        return (entities.size() - 1) == available;
     }
 
     /**
