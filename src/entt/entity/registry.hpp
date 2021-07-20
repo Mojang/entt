@@ -179,8 +179,8 @@ class basic_registry {
     };
 
     template<typename Component>
-    [[nodiscard]] const pool_handler<Component> & assure() const {
-        const sparse_set<entity_type> *cpool;
+    [[nodiscard]] pool_handler<Component> & assure() const {
+        sparse_set<entity_type> *cpool;
 
         if constexpr(ENTT_FAST_PATH(has_type_index_v<Component>)) {
             const auto index = type_index<Component>::value();
@@ -212,12 +212,20 @@ class basic_registry {
             }
         }
 
-        return *static_cast<const pool_handler<Component> *>(cpool);
+        return *static_cast<pool_handler<Component> *>(cpool);
     }
 
     template<typename Component>
-    [[nodiscard]] pool_handler<Component> & assure() {
-        return const_cast<pool_handler<Component> &>(std::as_const(*this).template assure<Component>());
+    [[nodiscard]] const pool_handler<Component> * pool_if_exists() const ENTT_NOEXCEPT {
+        static_assert(std::is_same_v<Component, std::decay_t<Component>>, "Non-decayed types not allowed");
+
+        if constexpr(ENTT_FAST_PATH(has_type_index_v<Component>)) {
+            const auto index = type_index<Component>::value();
+            return (!(index < pools.size()) || !pools[index].pool) ? nullptr : static_cast<const pool_handler<Component> *>(pools[index].pool.get());
+        } else {
+            const auto it = std::find_if(pools.cbegin(), pools.cend(), [id = type_info<Component>::id()](const auto &pdata) { return id == pdata.type_id; });
+            return it == pools.cend() ? nullptr : static_cast<const pool_handler<Component> *>(it->pool.get());
+        }
     }
 
 public:
@@ -262,7 +270,8 @@ public:
      */
     template<typename Component>
     [[nodiscard]] size_type size() const {
-        return assure<Component>().size();
+        const auto *cpool = pool_if_exists<Component>();
+        return cpool ? cpool->size() : size_type{};
     }
 
     /**
@@ -317,7 +326,8 @@ public:
      */
     template<typename Component>
     [[nodiscard]] size_type capacity() const {
-        return assure<Component>().capacity();
+        const auto *cpool = pool_if_exists<Component>();
+        return cpool ? cpool->capacity() : size_type{};
     }
 
     /**
@@ -355,7 +365,7 @@ public:
         if constexpr(sizeof...(Component) == 0) {
             return !alive();
         } else {
-            return (assure<Component>().empty() && ...);
+            return [](auto *... cpool) { return ((!cpool || cpool->empty()) && ...); }(pool_if_exists<Component>()...);
         }
     }
 
@@ -378,7 +388,8 @@ public:
      */
     template<typename Component>
     [[nodiscard]] const Component * raw() const {
-        return assure<Component>().raw();
+        auto *cpool = pool_if_exists<Component>();
+        return cpool ? cpool->raw() : nullptr;
     }
 
     /*! @copydoc raw */
@@ -402,7 +413,8 @@ public:
      */
     template<typename Component>
     [[nodiscard]] const entity_type * data() const {
-        return assure<Component>().data();
+        auto *cpool = pool_if_exists<Component>();
+        return cpool ? cpool->data() : nullptr;
     }
 
     /**
@@ -880,7 +892,7 @@ public:
     template<typename... Component>
     [[nodiscard]] bool has(const entity_type entity) const {
         ENTT_ASSERT(valid(entity));
-        return (assure<Component>().contains(entity) && ...);
+        return [entity](auto *... cpool) { return ((cpool && cpool->contains(entity)) && ...); }(pool_if_exists<Component>()...);
     }
 
     /**
@@ -899,7 +911,7 @@ public:
     template<typename... Component>
     [[nodiscard]] bool any(const entity_type entity) const {
         ENTT_ASSERT(valid(entity));
-        return (assure<Component>().contains(entity) || ...);
+        return [entity](auto *... cpool) { return ((cpool && cpool->contains(entity)) || ...); }(pool_if_exists<Component>()...);
     }
 
     /**
@@ -921,7 +933,9 @@ public:
         ENTT_ASSERT(valid(entity));
 
         if constexpr(sizeof...(Component) == 1) {
-            return (assure<Component>().get(entity), ...);
+            const auto *cpool = pool_if_exists<std::remove_const_t<Component>...>();
+            ENTT_ASSERT(cpool);
+            return cpool->get(entity);
         } else {
             return std::forward_as_tuple(get<Component>(entity)...);
         }
@@ -933,7 +947,7 @@ public:
         ENTT_ASSERT(valid(entity));
 
         if constexpr(sizeof...(Component) == 1) {
-            return (assure<Component>().get(entity), ...);
+            return (assure<std::remove_const_t<Component>>().get(entity), ...);
         } else {
             return std::forward_as_tuple(get<Component>(entity)...);
         }
@@ -987,7 +1001,8 @@ public:
         ENTT_ASSERT(valid(entity));
 
         if constexpr(sizeof...(Component) == 1) {
-            return (assure<Component>().try_get(entity), ...);
+            const auto *cpool = pool_if_exists<std::remove_const_t<Component>...>();
+            return (cpool && cpool->contains(entity)) ? &cpool->get(entity) : nullptr;
         } else {
             return std::make_tuple(try_get<Component>(entity)...);
         }
@@ -999,7 +1014,7 @@ public:
         ENTT_ASSERT(valid(entity));
 
         if constexpr(sizeof...(Component) == 1) {
-            return (assure<Component>().try_get(entity), ...);
+            return (const_cast<Component *>(std::as_const(*this).template try_get<Component>(entity)), ...);
         } else {
             return std::make_tuple(try_get<Component>(entity)...);
         }
