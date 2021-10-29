@@ -314,6 +314,8 @@ class basic_view<Entity, get_t<Component...>, exclude_t<Exclude...>> {
 
     [[nodiscard]] const auto *candidate() const ENTT_NOEXCEPT {
         return (std::min)({static_cast<const basic_common_type *>(std::get<storage_type<Component> *>(pools))...}, [](const auto *lhs, const auto *rhs) {
+			ENTT_ASSERT(lhs, "Unexpected nullptr");
+			ENTT_ASSERT(rhs, "Unexpected nullptr");
             return lhs->size() < rhs->size();
         });
     }
