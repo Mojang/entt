@@ -56,7 +56,7 @@ class basic_any {
         if constexpr(in_situ<Type>) {
             instance = (from.mode == policy::owner) ? ENTT_LAUNDER(reinterpret_cast<const Type *>(&from.storage)) : static_cast<const Type *>(from.instance);
         } else {
-			instance = static_cast<const Type *>(from.instance);
+            instance = static_cast<const Type *>(from.instance);
         }
 
         switch(op) {
