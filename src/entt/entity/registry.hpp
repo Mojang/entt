@@ -871,7 +871,6 @@ public:
     [[nodiscard]] decltype(auto) get_or_emplace(const entity_type entity, Args &&...args) {
         ENTT_ASSERT(valid(entity), "Invalid entity");
         auto *cpool = assure<Component>();
-        ENTT_ASSERT(cpool, "Unexpected nullptr");
         return cpool->contains(entity) ? cpool->get(entity) : cpool->emplace(*this, entity, std::forward<Args>(args)...);
     }
 

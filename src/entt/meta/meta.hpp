@@ -156,8 +156,8 @@ class meta_any {
 
     template<typename Type>
     static void basic_vtable([[maybe_unused]] const operation op, [[maybe_unused]] const any &from, [[maybe_unused]] void *to) {
-        ENTT_ASSERT(to, "Unexpected nullptr");
         static_assert(std::is_same_v<std::remove_reference_t<std::remove_const_t<Type>>, Type>, "Invalid type");
+
         if constexpr(!std::is_void_v<Type>) {
             switch(op) {
             case operation::deref:
@@ -968,7 +968,6 @@ private:
 class meta_type {
     template<auto Member, typename Pred>
     [[nodiscard]] const auto *lookup(meta_any *const args, const typename internal::meta_type_node::size_type sz, Pred pred) const {
-        ENTT_ASSERT(args,"Unexpected nullptr");
         std::decay_t<decltype(node->*Member)> candidate{};
         size_type extent{sz + 1u};
         bool ambiguous{};
@@ -1465,9 +1464,6 @@ class meta_sequence_container::meta_iterator {
 
     template<typename It>
     static void basic_vtable(const operation op, const any &from, void *to) {
-        if (!to) {
-            return;
-        }
         switch(op) {
         case operation::incr:
             ++any_cast<It &>(const_cast<any &>(from));
