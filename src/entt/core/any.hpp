@@ -43,7 +43,8 @@ class basic_any {
     static constexpr bool in_situ = Len && alignof(Type) <= alignof(storage_type) && sizeof(Type) <= sizeof(storage_type) && std::is_nothrow_move_constructible_v<Type>;
 
     template<typename Type>
-    static const void *basic_vtable([[maybe_unused]] const operation op, [[maybe_unused]] const basic_any &from, [[maybe_unused]] [[gsl::suppress(f.23)]] const void *to) {
+    static const void *basic_vtable([[maybe_unused]] const operation op, [[maybe_unused]] const basic_any &from, [[maybe_unused]] const void *to) {
+        // suppress warnings
         static_assert(!std::is_same_v<Type, void> && std::is_same_v<std::remove_reference_t<std::remove_const_t<Type>>, Type>, "Invalid type");
         const Type *instance = nullptr;
 
