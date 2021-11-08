@@ -44,14 +44,18 @@ class basic_any {
 
     template<typename Type>
     static const void *basic_vtable([[maybe_unused]] const operation op, [[maybe_unused]] const basic_any &from, [[maybe_unused]] const void *to) {
+        if (!to) {
+            return nullptr;
+        }
         static_assert(!std::is_same_v<Type, void> && std::is_same_v<std::remove_reference_t<std::remove_const_t<Type>>, Type>, "Invalid type");
-        const Type *instance = nullptr;
+        const Type *instance = static_cast<const Type*>(from.instance);
+        if (!instance) {
+            return nullptr;
+        }
 
         if constexpr(in_situ<Type>) {
             instance = (from.mode == policy::owner) ? ENTT_LAUNDER(reinterpret_cast<const Type *>(&from.storage)) : static_cast<const Type *>(from.instance);
-        } else {
-            instance = static_cast<const Type *>(from.instance);
-        }
+        } 
 
         switch(op) {
         case operation::copy:
@@ -450,6 +454,9 @@ Type any_cast(basic_any<Len, Align> &&data) ENTT_NOEXCEPT {
 /*! @copydoc any_cast */
 template<typename Type, std::size_t Len, std::size_t Align>
 const Type *any_cast(const basic_any<Len, Align> *data) ENTT_NOEXCEPT {
+    if (!data) {
+        return nullptr;
+    }
     const auto &info = type_id<std::remove_const_t<std::remove_reference_t<Type>>>();
     return static_cast<const Type *>(data->data(info));
 }
@@ -457,6 +464,9 @@ const Type *any_cast(const basic_any<Len, Align> *data) ENTT_NOEXCEPT {
 /*! @copydoc any_cast */
 template<typename Type, std::size_t Len, std::size_t Align>
 Type *any_cast(basic_any<Len, Align> *data) ENTT_NOEXCEPT {
+    if (!data) {
+        return nullptr;
+    }
     const auto &info = type_id<std::remove_const_t<std::remove_reference_t<Type>>>();
     // last attempt to make wrappers for const references return their values
     return static_cast<Type *>(static_cast<constness_as_t<basic_any<Len, Align>, Type> *>(data)->data(info));

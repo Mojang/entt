@@ -644,6 +644,7 @@ public:
     value_type &emplace(const entity_type entt, Args &&...args) {
         const auto pos = base_type::slot();
         auto elem = assure_at_least(pos);
+        ENTT_ASSERT(elem, "Unexpected nullptr");
         construct(elem, std::forward<Args>(args)...);
 
         ENTT_TRY {

@@ -590,6 +590,9 @@ template<typename Type>
  */
 inline void meta_reset(const id_type id) ENTT_NOEXCEPT {
     auto clear_chain = [](auto **curr, auto... member) {
+        if (!curr) {
+            return;
+        }
         for(; *curr; *curr = std::exchange((*curr)->next, nullptr)) {
             if constexpr(sizeof...(member) != 0u) {
                 static_assert(sizeof...(member) == 1u, "Assert in defense of the future me");
@@ -598,7 +601,11 @@ inline void meta_reset(const id_type id) ENTT_NOEXCEPT {
         }
     };
 
-    for(auto **it = internal::meta_context::global(); *it; it = &(*it)->next) {
+    auto** it = internal::meta_context::global();
+    if (!it) {
+        return;
+    }
+    for(; *it; it = &(*it)->next) {
         if(auto *node = *it; node->id == id) {
             clear_chain(&node->prop);
             clear_chain(&node->base);
