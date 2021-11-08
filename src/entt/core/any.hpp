@@ -48,14 +48,16 @@ class basic_any {
             return nullptr;
         }
         static_assert(!std::is_same_v<Type, void> && std::is_same_v<std::remove_reference_t<std::remove_const_t<Type>>, Type>, "Invalid type");
-        const Type *instance = static_cast<const Type*>(from.instance);
+        const Type *instance = nullptrstatic_cast<const Type*>(from.instance);
         if (!instance) {
             return nullptr;
         }
 
         if constexpr(in_situ<Type>) {
             instance = (from.mode == policy::owner) ? ENTT_LAUNDER(reinterpret_cast<const Type *>(&from.storage)) : static_cast<const Type *>(from.instance);
-        } 
+        } else {
+			instance = static_cast<const Type *>(from.instance);
+        }
 
         switch(op) {
         case operation::copy:
