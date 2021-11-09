@@ -159,6 +159,7 @@ class meta_any {
         static_assert(std::is_same_v<std::remove_reference_t<std::remove_const_t<Type>>, Type>, "Invalid type");
 
         if constexpr(!std::is_void_v<Type>) {
+            ENTT_ASSERT(to, "Unexpected nullptr");
             switch(op) {
             case operation::deref:
                 if constexpr(is_meta_pointer_like_v<Type>) {
@@ -977,6 +978,7 @@ class meta_type {
                 size_type direct{};
                 size_type ext{};
 
+                ENTT_ASSERT(args, "Unexpected nullptr");
                 for(size_type next{}; next < sz && next == (direct + ext) && args[next]; ++next) {
                     const auto type = args[next].type();
                     const auto other = curr->arg(next);
@@ -1469,6 +1471,7 @@ class meta_sequence_container::meta_iterator {
             ++any_cast<It &>(const_cast<any &>(from));
             break;
         case operation::deref:
+            ENTT_ASSERT(to, "Unexpected nullptr");
             static_cast<meta_any *>(to)->emplace<typename std::iterator_traits<It>::reference>(*any_cast<const It &>(from));
             break;
         }

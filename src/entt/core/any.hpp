@@ -44,7 +44,6 @@ class basic_any {
 
     template<typename Type>
     static const void *basic_vtable([[maybe_unused]] const operation op, [[maybe_unused]] const basic_any &from, [[maybe_unused]] const void *to) {
-        // suppress warnings
         static_assert(!std::is_same_v<Type, void> && std::is_same_v<std::remove_reference_t<std::remove_const_t<Type>>, Type>, "Invalid type");
         const Type *instance = nullptr;
 
@@ -54,6 +53,7 @@ class basic_any {
             instance = static_cast<const Type *>(from.instance);
         }
 
+        ENTT_ASSERT(instance, "Unexpected nullptr");
         switch(op) {
         case operation::copy:
             if constexpr(std::is_copy_constructible_v<Type>) {
@@ -451,6 +451,7 @@ Type any_cast(basic_any<Len, Align> &&data) ENTT_NOEXCEPT {
 /*! @copydoc any_cast */
 template<typename Type, std::size_t Len, std::size_t Align>
 const Type *any_cast(const basic_any<Len, Align> *data) ENTT_NOEXCEPT {
+    ENTT_ASSERT(data, "Unexpected nullptr");
     const auto &info = type_id<std::remove_const_t<std::remove_reference_t<Type>>>();
     return static_cast<const Type *>(data->data(info));
 }
@@ -458,6 +459,7 @@ const Type *any_cast(const basic_any<Len, Align> *data) ENTT_NOEXCEPT {
 /*! @copydoc any_cast */
 template<typename Type, std::size_t Len, std::size_t Align>
 Type *any_cast(basic_any<Len, Align> *data) ENTT_NOEXCEPT {
+    ENTT_ASSERT(data, "Unexpected nullptr");
     const auto &info = type_id<std::remove_const_t<std::remove_reference_t<Type>>>();
     // last attempt to make wrappers for const references return their values
     return static_cast<Type *>(static_cast<constness_as_t<basic_any<Len, Align>, Type> *>(data)->data(info));
