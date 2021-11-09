@@ -48,10 +48,11 @@ class basic_any {
         const Type *instance = static_cast<const Type*>(from.instance);;
 
         if constexpr(in_situ<Type>) {
-            instance = (from.mode == policy::owner) ? ENTT_LAUNDER(reinterpret_cast<const Type *>(&from.storage)) : static_cast<const Type *>(from.instance);
+            instance = (from.mode == policy::owner) ? ENTT_LAUNDER(reinterpret_cast<const Type*>(&from.storage)) : static_cast<const Type*>(from.instance);
+        } else {
+            instance = static_cast<const Type*>(from.instance);
         }
 
-        ENTT_ASSERT(instance, "Unexpected nullptr");
         switch(op) {
         case operation::copy:
             if constexpr(std::is_copy_constructible_v<Type>) {
