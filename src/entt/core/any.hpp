@@ -53,7 +53,7 @@ class basic_any {
             instance = static_cast<const Type *>(from.instance);
         }
 
-        ENTT_ASSERT(instance, "Unexpected nullptr");
+        //ENTT_ASSERT(instance, "Unexpected nullptr");
         switch(op) {
         case operation::copy:
             if constexpr(std::is_copy_constructible_v<Type>) {
