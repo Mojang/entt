@@ -56,6 +56,7 @@ class basic_any {
         switch(op) {
         case operation::copy:
             if constexpr(std::is_copy_constructible_v<Type>) {
+                ENTT_ASSERT(instance, "Unexpected nullptr");
                 static_cast<basic_any *>(const_cast<void *>(to))->initialize<Type>(*instance);
             }
             break;
