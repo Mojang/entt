@@ -77,7 +77,6 @@ class basic_any {
                 *const_cast<Type*>(instance) = std::move(*static_cast<Type*>(const_cast<void*>(to)));
                 return to;
             }
-            [[fallthrough]];
         }
         if (op == operation::assign) {
             if (to) {
