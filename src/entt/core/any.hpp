@@ -56,63 +56,56 @@ class basic_any {
         switch(op) {
         case operation::copy:
             if constexpr(std::is_copy_constructible_v<Type>) {
-                if (to && instance) {
-                    static_cast<basic_any*>(const_cast<void*>(to))->initialize<Type>(*instance);
-                }
+                ENTT_ASSERT(to && instance, "Unexpected nullptr");
+                static_cast<basic_any*>(const_cast<void*>(to))->initialize<Type>(*instance);
             }
             break;
         case operation::move:
             if constexpr(in_situ<Type>) {
                 if(from.mode == policy::owner) {
-                    if (to && instance) {
-                        return new(&static_cast<basic_any*>(const_cast<void*>(to))->storage) Type{ std::move(*const_cast<Type*>(instance)) };
-                    }
+                    ENTT_ASSERT(to && instance, "Unexpected nullptr");
+                    return new(&static_cast<basic_any*>(const_cast<void*>(to))->storage) Type{ std::move(*const_cast<Type*>(instance)) };
                 }
             }
 
             return (static_cast<basic_any *>(const_cast<void *>(to))->instance = std::exchange(const_cast<basic_any &>(from).instance, nullptr));
         case operation::transfer:
-            if constexpr(std::is_move_assignable_v<Type>) {
-                if (to) {
-                    *const_cast<Type*>(instance) = std::move(*static_cast<Type*>(const_cast<void*>(to)));
-                    return to;
-                }
+            if constexpr (std::is_move_assignable_v<Type>) {
+                ENTT_ASSERT(to, "Unexpected nullptr");
+                *const_cast<Type*>(instance) = std::move(*static_cast<Type*>(const_cast<void*>(to)));
+                return to;
             }
             [[fallthrough]];
         case operation::assign:
-            if constexpr(std::is_copy_assignable_v<Type>) {
-                if (to) {
-                    *const_cast<Type*>(instance) = *static_cast<const Type*>(to);
-                    return to;
-                }
+            if constexpr (std::is_copy_assignable_v<Type>) {
+                ENTT_ASSERT(to, "Unexpected nullptr");
+                *const_cast<Type*>(instance) = *static_cast<const Type*>(to);
+                return to;
             }
             break;
         case operation::destroy:
-            if (instance) {
-                if constexpr (in_situ<Type>) {
-                    instance->~Type();
-                }
-                else if constexpr (std::is_array_v<Type>) {
-                    delete[] instance;
-                }
-                else {
-                    delete instance;
-                }
-                break;
+            ENTT_ASSERT(to, "Unexpected nullptr");
+            if constexpr (in_situ<Type>) {
+                instance->~Type();
             }
+            else if constexpr (std::is_array_v<Type>) {
+                delete[] instance;
+            }
+            else {
+                delete instance;
+            }
+            break;
         case operation::compare:
-            if (to && instance) {
-                if constexpr (!std::is_function_v<Type> && !std::is_array_v<Type> && is_equality_comparable_v<Type>) {
-                    return *static_cast<const Type*>(instance) == *static_cast<const Type*>(to) ? to : nullptr;
-                }
-                else {
-                    return (instance == to) ? to : nullptr;
-                }
+            ENTT_ASSERT(to && instance, "Unexpected nullptr");
+            if constexpr (!std::is_function_v<Type> && !std::is_array_v<Type> && is_equality_comparable_v<Type>) {
+                return *static_cast<const Type*>(instance) == *static_cast<const Type*>(to) ? to : nullptr;
+            }
+            else {
+                return (instance == to) ? to : nullptr;
             }
         case operation::get:
-            if (instance) {
-                return instance;
-            }
+            ENTT_ASSERT(to, "Unexpected nullptr");
+            return instance;
         }
 
         return nullptr;
