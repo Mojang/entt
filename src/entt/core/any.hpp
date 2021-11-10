@@ -53,61 +53,48 @@ class basic_any {
             instance = static_cast<const Type *>(from.instance);
         }
 
-        if (op == operation::copy) {
-            if (to) {
-                if constexpr (std::is_copy_constructible_v<Type>) {
-                    ENTT_ASSERT(instance, "Unexpected nullptr");
-                    static_cast<basic_any*>(const_cast<void*>(to))->initialize<Type>(*instance);
+        switch(op) {
+        case operation::copy:
+            if constexpr(std::is_copy_constructible_v<Type>) {
+                static_cast<basic_any *>(const_cast<void *>(to))->initialize<Type>(*instance);
+            }
+            break;
+        case operation::move:
+            if constexpr(in_situ<Type>) {
+                if(from.mode == policy::owner) {
+                    return new(&static_cast<basic_any *>(const_cast<void *>(to))->storage) Type{std::move(*const_cast<Type *>(instance))};
                 }
             }
-        }
-        if (op == operation::move) {
-            if (to) {
-                if constexpr (in_situ<Type>) {
-                    if (from.mode == policy::owner) {
-                        return new(&static_cast<basic_any*>(const_cast<void*>(to))->storage) Type{ std::move(*const_cast<Type*>(instance)) };
-                    }
-                }
 
-                return (static_cast<basic_any*>(const_cast<void*>(to))->instance = std::exchange(const_cast<basic_any&>(from).instance, nullptr));
-            }
-        }
-        if (op == operation::transfer) {
-            if constexpr (std::is_move_assignable_v<Type>) {
-                *const_cast<Type*>(instance) = std::move(*static_cast<Type*>(const_cast<void*>(to)));
+            return (static_cast<basic_any *>(const_cast<void *>(to))->instance = std::exchange(const_cast<basic_any &>(from).instance, nullptr));
+        case operation::transfer:
+            if constexpr(std::is_move_assignable_v<Type>) {
+                *const_cast<Type *>(instance) = std::move(*static_cast<Type *>(const_cast<void *>(to)));
                 return to;
             }
-        }
-        if (op == operation::assign) {
-            if (to) {
-                if constexpr (std::is_copy_assignable_v<Type>) {
-                    *const_cast<Type*>(instance) = *static_cast<const Type*>(to);
-                    return to;
-                }
+            [[fallthrough]];
+        case operation::assign:
+            if constexpr(std::is_copy_assignable_v<Type>) {
+                *const_cast<Type *>(instance) = *static_cast<const Type *>(to);
+                return to;
             }
-        }
-        if (op == operation::destroy) {
-            if constexpr (in_situ<Type>) {
+            break;
+        case operation::destroy:
+            if constexpr(in_situ<Type>) {
                 instance->~Type();
-            }
-            else if constexpr (std::is_array_v<Type>) {
+            } else if constexpr(std::is_array_v<Type>) {
                 delete[] instance;
-            }
-            else {
+            } else {
                 delete instance;
             }
-        }
-        if (op == operation::compare) {
-            if (to) {
-                if constexpr (!std::is_function_v<Type> && !std::is_array_v<Type> && is_equality_comparable_v<Type>) {
-                    return *static_cast<const Type*>(instance) == *static_cast<const Type*>(to) ? to : nullptr;
-                }
-                else {
-                    return (instance == to) ? to : nullptr;
-                }
+            break;
+        case operation::compare:
+            if constexpr(!std::is_function_v<Type> && !std::is_array_v<Type> && is_equality_comparable_v<Type>) {
+                return *static_cast<const Type *>(instance) == *static_cast<const Type *>(to) ? to : nullptr;
+            } else {
+                return (instance == to) ? to : nullptr;
             }
-        }
-        if (op == operation::get) {
+        case operation::get:
             return instance;
         }
 
@@ -463,7 +450,6 @@ Type any_cast(basic_any<Len, Align> &&data) ENTT_NOEXCEPT {
 /*! @copydoc any_cast */
 template<typename Type, std::size_t Len, std::size_t Align>
 const Type *any_cast(const basic_any<Len, Align> *data) ENTT_NOEXCEPT {
-    ENTT_ASSERT(data, "Unexpected nullptr");
     const auto &info = type_id<std::remove_const_t<std::remove_reference_t<Type>>>();
     return static_cast<const Type *>(data->data(info));
 }
@@ -471,7 +457,6 @@ const Type *any_cast(const basic_any<Len, Align> *data) ENTT_NOEXCEPT {
 /*! @copydoc any_cast */
 template<typename Type, std::size_t Len, std::size_t Align>
 Type *any_cast(basic_any<Len, Align> *data) ENTT_NOEXCEPT {
-    ENTT_ASSERT(data, "Unexpected nullptr");
     const auto &info = type_id<std::remove_const_t<std::remove_reference_t<Type>>>();
     // last attempt to make wrappers for const references return their values
     return static_cast<Type *>(static_cast<constness_as_t<basic_any<Len, Align>, Type> *>(data)->data(info));
