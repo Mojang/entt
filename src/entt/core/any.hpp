@@ -104,7 +104,6 @@ class basic_any {
                 return (instance == to) ? to : nullptr;
             }
         case operation::get:
-            ENTT_ASSERT(instance, "Unexpected nullptr");
             return instance;
         }
 
