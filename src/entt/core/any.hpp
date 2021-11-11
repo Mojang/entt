@@ -84,8 +84,8 @@ class basic_any {
             }
             break;
         case operation::destroy:
-            ENTT_ASSERT(instance, "Unexpected nullptr");
             if constexpr (in_situ<Type>) {
+                ENTT_ASSERT(instance, "Unexpected nullptr");
                 instance->~Type();
             }
             else if constexpr (std::is_array_v<Type>) {
