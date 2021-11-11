@@ -84,7 +84,7 @@ class basic_any {
             }
             break;
         case operation::destroy:
-            ENTT_ASSERT(to, "Unexpected nullptr");
+            ENTT_ASSERT(instance, "Unexpected nullptr");
             if constexpr (in_situ<Type>) {
                 instance->~Type();
             }
