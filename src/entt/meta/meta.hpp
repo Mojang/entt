@@ -969,6 +969,7 @@ private:
 class meta_type {
     template<auto Member, typename Pred>
     [[nodiscard]] const auto *lookup(meta_any *const args, const typename internal::meta_type_node::size_type sz, Pred pred) const {
+        ENTT_ASSERT(args, "Unexpected nullptr");
         std::decay_t<decltype(node->*Member)> candidate{};
         size_type extent{sz + 1u};
         bool ambiguous{};
@@ -978,7 +979,6 @@ class meta_type {
                 size_type direct{};
                 size_type ext{};
 
-                ENTT_ASSERT(args, "Unexpected nullptr");
                 for(size_type next{}; next < sz && next == (direct + ext) && args[next]; ++next) {
                     const auto type = args[next].type();
                     const auto other = curr->arg(next);

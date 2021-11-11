@@ -57,50 +57,47 @@ class basic_any {
         case operation::copy:
             if constexpr(std::is_copy_constructible_v<Type>) {
                 ENTT_ASSERT(to && instance, "Unexpected nullptr");
-                static_cast<basic_any*>(const_cast<void*>(to))->initialize<Type>(*instance);
+                static_cast<basic_any *>(const_cast<void *>(to))->initialize<Type>(*instance);
             }
             break;
         case operation::move:
             if constexpr(in_situ<Type>) {
                 if(from.mode == policy::owner) {
                     ENTT_ASSERT(to && instance, "Unexpected nullptr");
-                    return new(&static_cast<basic_any*>(const_cast<void*>(to))->storage) Type{ std::move(*const_cast<Type*>(instance)) };
+                    return new(&static_cast<basic_any *>(const_cast<void *>(to))->storage) Type{ std::move(*const_cast<Type *>(instance))};
                 }
             }
 
             return (static_cast<basic_any *>(const_cast<void *>(to))->instance = std::exchange(const_cast<basic_any &>(from).instance, nullptr));
         case operation::transfer:
-            if constexpr (std::is_move_assignable_v<Type>) {
+            if constexpr(std::is_move_assignable_v<Type>) {
                 ENTT_ASSERT(to, "Unexpected nullptr");
-                *const_cast<Type*>(instance) = std::move(*static_cast<Type*>(const_cast<void*>(to)));
+                *const_cast<Type *>(instance) = std::move(*static_cast<Type *>(const_cast<void *>(to)));
                 return to;
             }
             [[fallthrough]];
         case operation::assign:
-            if constexpr (std::is_copy_assignable_v<Type>) {
+            if constexpr(std::is_copy_assignable_v<Type>) {
                 ENTT_ASSERT(to, "Unexpected nullptr");
-                *const_cast<Type*>(instance) = *static_cast<const Type*>(to);
+                *const_cast<Type *>(instance) = *static_cast<const Type *>(to);
                 return to;
             }
             break;
         case operation::destroy:
-            if constexpr (in_situ<Type>) {
+            if constexpr(in_situ<Type>) {
                 ENTT_ASSERT(instance, "Unexpected nullptr");
                 instance->~Type();
-            }
-            else if constexpr (std::is_array_v<Type>) {
+            } else if constexpr(std::is_array_v<Type>) {
                 delete[] instance;
-            }
-            else {
+            } else {
                 delete instance;
             }
             break;
         case operation::compare:
             ENTT_ASSERT(to && instance, "Unexpected nullptr");
-            if constexpr (!std::is_function_v<Type> && !std::is_array_v<Type> && is_equality_comparable_v<Type>) {
-                return *static_cast<const Type*>(instance) == *static_cast<const Type*>(to) ? to : nullptr;
-            }
-            else {
+            if constexpr(!std::is_function_v<Type> && !std::is_array_v<Type> && is_equality_comparable_v<Type>) {
+                return *static_cast<const Type *>(instance) == *static_cast<const Type *>(to) ? to : nullptr;
+            } else {
                 return (instance == to) ? to : nullptr;
             }
         case operation::get:
