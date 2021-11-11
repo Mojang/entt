@@ -64,7 +64,7 @@ class basic_any {
             if constexpr(in_situ<Type>) {
                 if(from.mode == policy::owner) {
                     ENTT_ASSERT(to && instance, "Unexpected nullptr");
-                    return new(&static_cast<basic_any *>(const_cast<void *>(to))->storage) Type{ std::move(*const_cast<Type *>(instance))};
+                    return new(&static_cast<basic_any *>(const_cast<void *>(to))->storage) Type{std::move(*const_cast<Type *>(instance))};
                 }
             }
 
