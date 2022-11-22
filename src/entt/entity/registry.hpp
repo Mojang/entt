@@ -314,10 +314,13 @@ class basic_registry {
     }
 
     auto release_entity(const Entity entity, const typename entity_traits::version_type version) {
-        const typename entity_traits::version_type vers = version + (version == entity_traits::to_version(tombstone));
-        entities[entity_traits::to_entity(entity)] = entity_traits::construct(entity_traits::to_integral(free_list), vers);
-        free_list = entity_traits::combine(entity_traits::to_integral(entity), tombstone);
-        return vers;
+        entities[entity_traits::to_entity(entity)] = entity_traits::construct(entity_traits::to_integral(free_list), version);
+
+        if(version != entity_traits::to_version(tombstone)) {
+            free_list = entity_traits::combine(entity_traits::to_integral(entity), tombstone);
+        }
+
+        return version;
     }
 
 public:
