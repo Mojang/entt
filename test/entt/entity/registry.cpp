@@ -482,14 +482,18 @@ TEST(Registry, CreateClearCycle) {
     for(int i = 0; i < 7; ++i) {
         const auto entity = registry.create();
         registry.emplace<int>(entity);
-        if(i == 3) { pre = entity; }
+        if(i == 3) {
+            pre = entity;
+        }
     }
 
     registry.clear();
 
     for(int i = 0; i < 5; ++i) {
         const auto entity = registry.create();
-        if(i == 3) { post = entity; }
+        if(i == 3) {
+            post = entity;
+        }
     }
 
     ASSERT_FALSE(registry.valid(pre));
@@ -701,8 +705,24 @@ TEST(Registry, VersionOverflow) {
     registry.release(registry.create(), traits_type::to_version(entt::tombstone) - 1u);
     registry.release(registry.create());
 
-    ASSERT_NE(registry.current(entity), traits_type::to_version(entity));
-    ASSERT_EQ(registry.current(entity), traits_type::to_version(entt::tombstone));
+    ASSERT_EQ(registry.current(entity), traits_type::to_version(entity));
+    ASSERT_EQ(registry.current(entity), typename traits_type::version_type{});
+}
+
+TEST(Registry, InBetweenVersionOverflow) {
+    using traits_type = entt::entt_traits<entt::entity>;
+
+    entt::registry registry;
+    const auto entity = registry.create();
+    const auto other = registry.create();
+
+    registry.release(other);
+    registry.release(entity, traits_type::to_version(entt::tombstone));
+
+    ASSERT_EQ(traits_type::to_entity(registry.create()), traits_type::to_entity(other));
+    ASSERT_EQ(traits_type::to_entity(registry.create()), traits_type::to_entity(entity));
+    ASSERT_EQ(registry.current(other), traits_type::version_type{} + 1);
+    ASSERT_EQ(registry.current(entity), traits_type::version_type{});
 }
 
 TEST(Registry, NullEntity) {
@@ -725,7 +745,7 @@ TEST(Registry, TombstoneVersion) {
     const auto vers = traits_type::to_version(entity);
     const auto required = traits_type::construct(traits_type::to_entity(other), vers);
 
-    ASSERT_EQ(registry.release(other, vers), vers);
+    ASSERT_NE(registry.release(other, vers), vers);
     ASSERT_NE(registry.create(required), required);
 }
 
@@ -744,7 +764,9 @@ TEST(Registry, Each) {
     match = 0u;
 
     registry.each([&](auto entity) {
-        if(registry.all_of<int>(entity)) { ++match; }
+        if(registry.all_of<int>(entity)) {
+            ++match;
+        }
         static_cast<void>(registry.create());
         ++tot;
     });
@@ -771,7 +793,9 @@ TEST(Registry, Each) {
     match = 0u;
 
     registry.each([&](auto entity) {
-        if(registry.all_of<int>(entity)) { ++match; }
+        if(registry.all_of<int>(entity)) {
+            ++match;
+        }
         registry.destroy(entity);
         ++tot;
     });

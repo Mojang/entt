@@ -313,14 +313,40 @@ class basic_registry {
         return (entities[curr] = entity_traits::combine(curr, entity_traits::to_integral(entities[curr])));
     }
 
-    auto release_entity(const Entity entity, const typename entity_traits::version_type version) {
-        entities[entity_traits::to_entity(entity)] = entity_traits::construct(entity_traits::to_integral(free_list), version);
+    auto release_entity(const Entity entity, typename entity_traits::version_type version) {
+        if(version == entity_traits::to_version(tombstone)) {
+            ++version;
 
-        if(version != entity_traits::to_version(tombstone)) {
+            // entity wraps around the tombstone value ==> append
+            if(free_list == null) {
+                entities[entity_traits::to_entity(entity)] = entity_traits::construct(entity_traits::to_integral(null), version);
+                free_list = entity_traits::combine(entity_traits::to_integral(entity), tombstone);
+            } else {
+                entities[entity_traits::to_entity(entity)] = entity_traits::construct(entity_traits::to_integral(entities[free_list_tail]), version);
+                entities[free_list_tail] = entity_traits::combine(entity_traits::to_integral(entity), entity_traits::to_integral(entities[free_list_tail]));
+            }
+
+            free_list_tail = size_type(entity_traits::to_entity(entity));
+        } else {
+            if(free_list == null) {
+                free_list_tail = size_type(entity_traits::to_entity(entity));
+            }
+
+            // entity does not wrap around the tombstone value ==> prepend
+            entities[entity_traits::to_entity(entity)] = entity_traits::construct(entity_traits::to_integral(free_list), version);
             free_list = entity_traits::combine(entity_traits::to_integral(entity), tombstone);
         }
 
         return version;
+    }
+
+    void reset_free_list_tail() {
+        if(free_list != null) {
+            for(
+                free_list_tail = size_type(entity_traits::to_entity(free_list));
+                entity_traits::to_entity(entities[free_list_tail]) != null;
+                free_list_tail = size_type(entity_traits::to_entity(entities[free_list_tail]))) {}
+        }
     }
 
 public:
@@ -347,6 +373,7 @@ public:
           groups{std::move(other.groups)},
           entities{std::move(other.entities)},
           free_list{other.free_list},
+          free_list_tail{},
           vars{std::move(other.vars)} {
         for(auto &&curr: pools) {
             curr.second->bind(forward_as_any(*this));
@@ -363,6 +390,7 @@ public:
         groups = std::move(other.groups);
         entities = std::move(other.entities);
         free_list = other.free_list;
+        free_list_tail = other.free_list_tail;
         vars = std::move(other.vars);
 
         for(auto &&curr: pools) {
@@ -572,7 +600,9 @@ public:
             auto *it = &free_list;
             for(; entity_traits::to_entity(*it) != req; it = &entities[entity_traits::to_entity(*it)]) {}
             *it = entity_traits::combine(curr, entity_traits::to_integral(*it));
-            return (entities[req] = hint);
+            entities[req] = hint;
+            reset_free_list_tail();
+            return hint;
         }
     }
 
@@ -621,6 +651,7 @@ public:
         ENTT_ASSERT(!alive(), "Entities still alive");
         entities.assign(first, last);
         free_list = destroyed;
+        reset_free_list_tail();
     }
 
     /**
@@ -1472,6 +1503,7 @@ private:
     std::vector<group_data> groups{};
     std::vector<entity_type> entities{};
     entity_type free_list{tombstone};
+    size_type free_list_tail{};
     context vars;
 };
 

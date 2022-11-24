@@ -89,6 +89,6 @@ TEST(Entity, Tombstone) {
     const auto other = traits_type::construct(entt::to_entity(entity), vers);
 
     ASSERT_FALSE(registry.valid(entt::tombstone));
-    ASSERT_EQ(registry.destroy(entity, vers), vers);
+    ASSERT_NE(registry.destroy(entity, vers), vers);
     ASSERT_NE(registry.create(other), other);
 }
