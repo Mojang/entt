@@ -86,6 +86,10 @@ struct sparse_set_iterator final {
         return *operator->();
     }
 
+    [[nodiscard]] constexpr pointer data() const noexcept {
+        return packed ? packed->data() : nullptr;
+    }
+
     [[nodiscard]] difference_type index() const ENTT_NOEXCEPT {
         return offset - 1;
     }
@@ -189,6 +193,10 @@ class basic_sparse_set {
         return sparse[pos / entity_traits::page_size][fast_mod(pos, entity_traits::page_size)];
     }
 
+    [[nodiscard]] auto to_iterator(const Entity entt) const {
+        return --(end() - index(entt));
+    }
+
     [[nodiscard]] auto &assure_at_least(const Entity entt) {
         const auto pos = static_cast<size_type>(entity_traits::to_entity(entt));
         const auto page = pos / entity_traits::page_size;
@@ -233,31 +241,71 @@ protected:
     using basic_iterator = internal::sparse_set_iterator<packed_container_type>;
 
     /**
-     * @brief Erases entities from a sparse set.
-     * @param first An iterator to the first element of the range of entities.
-     * @param last An iterator past the last element of the range of entities.
+     * @brief Erases an entity from a sparse set.
+     * @param it An iterator to the element to pop.
      */
-    virtual void swap_and_pop(basic_iterator first, basic_iterator last) {
-        for(; first != last; ++first) {
-            sparse_ref(packed.back()) = entity_traits::combine(static_cast<typename entity_traits::entity_type>(first.index()), entity_traits::to_integral(packed.back()));
-            const auto entt = std::exchange(packed[first.index()], packed.back());
-            // unnecessary but it helps to detect nasty bugs
-            ENTT_ASSERT((packed.back() = tombstone, true), "");
-            // lazy self-assignment guard
-            sparse_ref(entt) = null;
-            packed.pop_back();
-        }
+    void swap_and_pop(const basic_iterator it) {
+        ENTT_ASSERT(mode == deletion_policy::swap_and_pop, "Deletion policy mismatched");
+        auto &self = sparse_ref(*it);
+        const auto entt = entity_traits::to_entity(self);
+        sparse_ref(packed.back()) = entity_traits::combine(entt, entity_traits::to_integral(packed.back()));
+        packed[static_cast<size_type>(entt)] = packed.back();
+        // unnecessary but it helps to detect nasty bugs
+        ENTT_ASSERT((packed.back() = null, true), "");
+        // lazy self-assignment guard
+        self = null;
+        packed.pop_back();
     }
 
+    /**
+     * @brief Erases an entity from a sparse set.
+     * @param it An iterator to the element to pop.
+     */
+    void in_place_pop(const basic_iterator it) {
+        ENTT_ASSERT(mode == deletion_policy::in_place, "Deletion policy mismatched");
+        const auto entt = entity_traits::to_entity(std::exchange(sparse_ref(*it), null));
+        packed[static_cast<size_type>(entt)] = std::exchange(free_list, entity_traits::combine(entt, tombstone));
+    }
+
+    /*! @brief Compact function for empty sparse sets. */
+    void fast_compact() {
+        ENTT_ASSERT((compact(), size()) == 0u, "Non-empty set");
+        packed.clear();
+        free_list = tombstone;
+    }
+
+protected:
     /**
      * @brief Erases entities from a sparse set.
      * @param first An iterator to the first element of the range of entities.
      * @param last An iterator past the last element of the range of entities.
      */
-    virtual void in_place_pop(basic_iterator first, basic_iterator last) {
-        for(; first != last; ++first) {
-            sparse_ref(*first) = null;
-            packed[first.index()] = std::exchange(free_list, entity_traits::combine(static_cast<typename entity_traits::entity_type>(first.index()), entity_traits::reserved));
+    virtual void pop(basic_iterator first, basic_iterator last) {
+        if(mode == deletion_policy::swap_and_pop) {
+            for(; first != last; ++first) {
+                swap_and_pop(first);
+            }
+        } else {
+            for(; first != last; ++first) {
+                in_place_pop(first);
+            }
+        }
+    }
+
+    /*! @brief Erases all entities of a sparse set. */
+    virtual void pop_all() {
+        if(mode == deletion_policy::swap_and_pop) {
+            for(auto first = begin(); !(first.index() < 0); ++first) {
+                swap_and_pop(first);
+            }
+        } else {
+            for(auto first = begin(); !(first.index() < 0); ++first) {
+                if(*first != tombstone) {
+                    in_place_pop(first);
+                }
+            }
+
+            fast_compact();
         }
     }
 
@@ -692,8 +740,8 @@ public:
      * @param entt A valid identifier.
      */
     void erase(const entity_type entt) {
-        const auto it = --(end() - index(entt));
-        (mode == deletion_policy::in_place) ? in_place_pop(it, it + 1u) : swap_and_pop(it, it + 1u);
+        const auto it = to_iterator(entt);
+        pop(it, it + 1u);
     }
 
     /**
@@ -708,7 +756,7 @@ public:
     template<typename It>
     void erase(It first, It last) {
         if constexpr(std::is_same_v<It, basic_iterator>) {
-            (mode == deletion_policy::in_place) ? in_place_pop(first, last) : swap_and_pop(first, last);
+            pop(first, last);
         } else {
             for(; first != last; ++first) {
                 erase(*first);
@@ -736,8 +784,25 @@ public:
     size_type remove(It first, It last) {
         size_type count{};
 
-        for(; first != last; ++first) {
-            count += remove(*first);
+        if constexpr(std::is_same_v<It, basic_iterator>) {
+            while(first != last) {
+                while(first != last && !contains(*first)) {
+                    ++first;
+                }
+
+                const auto it = first;
+
+                while(first != last && contains(*first)) {
+                    ++first;
+                }
+
+                count += std::distance(it, first);
+                erase(it, first);
+            }
+        } else {
+            for(; first != last; ++first) {
+                count += remove(*first);
+            }
         }
 
         return count;
@@ -899,19 +964,7 @@ public:
 
     /*! @brief Clears a sparse set. */
     void clear() {
-        if(const auto last = end(); free_list == null) {
-            in_place_pop(begin(), last);
-        } else {
-            for(auto &&entity: *this) {
-                // tombstone filter on itself
-                if(const auto it = find(entity); it != last) {
-                    in_place_pop(it, it + 1u);
-                }
-            }
-        }
-
-        free_list = tombstone;
-        packed.clear();
+        pop_all();
     }
 
     /**

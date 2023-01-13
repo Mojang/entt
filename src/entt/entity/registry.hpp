@@ -752,8 +752,31 @@ public:
      */
     template<typename It>
     void destroy(It first, It last) {
-        for(; first != last; ++first) {
-            destroy(*first, entity_traits::to_version(*first) + 1u);
+        if constexpr(std::is_same_v<It, typename base_type::iterator>) {
+            base_type *owner = nullptr;
+
+            for(size_type pos = pools.size(); pos; --pos) {
+                if(pools.begin()[pos - 1u].second->data() == first.data()) {
+                    owner = pools.begin()[pos - 1u].second.get();
+                } else {
+                    pools.begin()[pos - 1u].second->remove(first, last);
+                }
+            }
+
+            if(owner) {
+                // waiting to further/completely optimize this with the entity storage
+                for(; first != last; ++first) {
+                    const auto entt = *first;
+                    owner->remove(entt);
+                    release(entt);
+                }
+            } else {
+                release(std::move(first), std::move(last));
+            }
+        } else {
+            for(; first != last; ++first) {
+                destroy(*first);
+            }
         }
     }
 
@@ -917,19 +940,28 @@ public:
      */
     template<typename Component, typename... Other, typename It>
     size_type remove(It first, It last) {
-        if constexpr(sizeof...(Other) == 0u) {
-            ENTT_ASSERT(std::all_of(first, last, [this](const auto entity) { return valid(entity); }), "Invalid entity");
-            return assure<Component>().remove(std::move(first), std::move(last));
-        } else {
-            size_type count{};
+        size_type count{};
 
+        if constexpr(sizeof...(Other) == 0u) {
+            count += assure<Component>().remove(std::move(first), std::move(last));
+        } else if constexpr(std::is_same_v<It, typename base_type::iterator>) {
+            constexpr size_type len = sizeof...(Other) + 1u;
+            base_type *cpools[len]{&assure<Component>(), &assure<Other>()...};
+
+            for(size_type pos{}; pos < len; ++pos) {
+                if(cpools[pos]->data() == first.data()) {
+                    std::swap(cpools[pos], cpools[len - 1u]);
+                }
+
+                count += cpools[pos]->remove(first, last);
+            }
+        } else {
             for(auto cpools = std::forward_as_tuple(assure<Component>(), assure<Other>()...); first != last; ++first) {
-                ENTT_ASSERT(valid(*first), "Invalid entity");
                 count += std::apply([entt = *first](auto &...curr) { return (curr.remove(entt) + ... + 0u); }, cpools);
             }
-
-            return count;
         }
+
+        return count;
     }
 
     /**
@@ -963,11 +995,20 @@ public:
     template<typename Component, typename... Other, typename It>
     void erase(It first, It last) {
         if constexpr(sizeof...(Other) == 0u) {
-            ENTT_ASSERT(std::all_of(first, last, [this](const auto entity) { return valid(entity); }), "Invalid entity");
             assure<Component>().erase(std::move(first), std::move(last));
+        } else if constexpr(std::is_same_v<It, typename base_type::iterator>) {
+            constexpr size_type len = sizeof...(Other) + 1u;
+            base_type *cpools[len]{&assure<Component>(), &assure<Other>()...};
+
+            for(size_type pos{}; pos < len; ++pos) {
+                if(cpools[pos]->data() == first.data()) {
+                    std::swap(cpools[pos], cpools[len - 1u]);
+                }
+
+                cpools[pos]->erase(first, last);
+            }
         } else {
             for(auto cpools = std::forward_as_tuple(assure<Component>(), assure<Other>()...); first != last; ++first) {
-                ENTT_ASSERT(valid(*first), "Invalid entity");
                 std::apply([entt = *first](auto &...curr) { (curr.erase(entt), ...); }, cpools);
             }
         }
