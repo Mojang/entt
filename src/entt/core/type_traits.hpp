@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <iterator>
+#include <optional>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -800,10 +801,39 @@ template<typename Type>
  * @endcond
  */
 
+// MSVC's 'std::optional<>::operator==' is not SFINAE friendly because of its noexcept specifier:
+//
+//   template <class _Ty1, class _Ty2>
+//   constexpr bool operator==(const optional<_Ty1>& _Left, const optional<_Ty2>& _Right) noexcept(noexcept(*_Left == *_Right))
+//
+// The noexcept specifier is not part of a function's immediate context, so substitution failures within it make the program ill-formed.
+// Both Clang and GCC raise an error when this 'operator==' is used in a 'void_t' expression. MSVC does not raise an error.
+//
+// Specializing 'is_equality_comparable' for 'optional<Type>' does not fix this error, as the 'is_equality_comparable<Type>' specialization is
+// still evaluated and its 'void_t' expression raises an error. To fix this, 'is_equality_comparable<Type>' and 'is_equality_comparable<optional<Type>>'
+// delegate the 'void_t' logic to 'is_equality_comparable_sfinae_fix'. optional<>'s 'operator==' is now never invoked, working around the error.
+//
+// Any template types that are not SFINAE-friendly can use 'is_equality_comparable_sfinae_fix'. Given template type T, specialize 'is_equality_comparable'
+// for 'T<Type>' and inherit from 'is_equality_comparable_sfinae_fix<T<Type>, Type>`. 
+
+template <typename OuterType, typename Type, typename = void>
+struct is_equality_comparable_sfinae_fix : std::false_type {};
+
+template<typename OuterType, typename Type>
+struct is_equality_comparable_sfinae_fix<OuterType, Type, std::void_t<decltype(std::declval<Type>() == std::declval<Type>())>>
+    : std::bool_constant<internal::maybe_equality_comparable<OuterType>(choice<2>)> {};
+
+template<typename Type>
+struct is_equality_comparable_sfinae_fix<Type, Type, std::void_t<decltype(std::declval<Type>() == std::declval<Type>())>>
+    : std::bool_constant<internal::maybe_equality_comparable<Type>(choice<2>)> {};
+
 /*! @copydoc is_equality_comparable */
 template<typename Type>
-struct is_equality_comparable<Type, std::void_t<decltype(std::declval<Type>() == std::declval<Type>())>>
-    : std::bool_constant<internal::maybe_equality_comparable<Type>(choice<2>)> {};
+struct is_equality_comparable<Type> : is_equality_comparable_sfinae_fix<Type, Type> {};
+
+/*! @copydoc is_equality_comparable */
+template<typename Type>
+struct is_equality_comparable<std::optional<Type>> : is_equality_comparable_sfinae_fix<std::optional<Type>, Type> {};
 
 /*! @copydoc is_equality_comparable */
 template<typename Type, auto N>
