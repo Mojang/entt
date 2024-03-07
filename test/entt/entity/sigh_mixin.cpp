@@ -387,7 +387,7 @@ TYPED_TEST(SighMixin, Move) {
 
 TYPED_TEST(SighMixin, Swap) {
     using value_type = typename TestFixture::type;
-    using traits_type = entt::component_traits<value_type>;
+    using traits_type = entt::component_traits<value_type, entt::entity>;
     entt::sigh_mixin<entt::storage<value_type>> pool;
     entt::sigh_mixin<entt::storage<value_type>> other;
     entt::registry registry;
@@ -522,7 +522,7 @@ TYPED_TEST(SighMixin, ThrowingAllocator) {
     using registry_type = typename decltype(pool)::registry_type;
     registry_type registry;
 
-    constexpr auto packed_page_size = entt::component_traits<typename decltype(pool)::value_type>::page_size;
+    constexpr auto packed_page_size = entt::component_traits<typename decltype(pool)::value_type, entt::entity>::page_size;
     constexpr auto sparse_page_size = entt::entt_traits<typename decltype(pool)::entity_type>::page_size;
 
     std::size_t on_construct{};

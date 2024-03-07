@@ -61,7 +61,7 @@ struct create_from_constructor {
 };
 
 template<>
-struct entt::component_traits<std::unordered_set<char>> {
+struct entt::component_traits<std::unordered_set<char>, entt::entity> {
     static constexpr auto in_place_delete = true;
     static constexpr auto page_size = 4u;
 };
@@ -81,7 +81,7 @@ TYPED_TEST_SUITE(StorageDeathTest, StorageTypes, );
 
 TYPED_TEST(Storage, Constructors) {
     using value_type = typename TestFixture::type;
-    using traits_type = entt::component_traits<value_type>;
+    using traits_type = entt::component_traits<value_type, entt::entity>;
     entt::storage<value_type> pool;
 
     ASSERT_EQ(pool.policy(), entt::deletion_policy{traits_type::in_place_delete});
@@ -152,7 +152,7 @@ TYPED_TEST(Storage, Move) {
 
 TYPED_TEST(Storage, Swap) {
     using value_type = typename TestFixture::type;
-    using traits_type = entt::component_traits<value_type>;
+    using traits_type = entt::component_traits<value_type, entt::entity>;
     entt::storage<value_type> pool;
     entt::storage<value_type> other;
 
@@ -185,7 +185,7 @@ TYPED_TEST(Storage, Swap) {
 
 TYPED_TEST(Storage, Capacity) {
     using value_type = typename TestFixture::type;
-    using traits_type = entt::component_traits<value_type>;
+    using traits_type = entt::component_traits<value_type, entt::entity>;
     entt::storage<value_type> pool;
 
     pool.reserve(64);
@@ -201,7 +201,7 @@ TYPED_TEST(Storage, Capacity) {
 
 TYPED_TEST(Storage, ShrinkToFit) {
     using value_type = typename TestFixture::type;
-    using traits_type = entt::component_traits<value_type>;
+    using traits_type = entt::component_traits<value_type, entt::entity>;
     entt::storage<value_type> pool;
 
     for(std::size_t next{}; next < traits_type::page_size; ++next) {
@@ -522,7 +522,7 @@ TYPED_TEST(Storage, IteratorConversion) {
 
 TYPED_TEST(Storage, IteratorPageSizeAwareness) {
     using value_type = typename TestFixture::type;
-    using traits_type = entt::component_traits<value_type>;
+    using traits_type = entt::component_traits<value_type, entt::entity>;
     entt::storage<value_type> pool;
 
     const value_type check{2};
@@ -632,7 +632,7 @@ TEST(Storage, EmplaceSelfMoveSupportInPlaceDelete) {
 
 TYPED_TEST(Storage, TryEmplace) {
     using value_type = typename TestFixture::type;
-    using traits_type = entt::component_traits<value_type>;
+    using traits_type = entt::component_traits<value_type, entt::entity>;
     entt::storage<value_type> pool;
     entt::sparse_set &base = pool;
 
@@ -802,7 +802,7 @@ ENTT_DEBUG_TYPED_TEST(StorageDeathTest, Patch) {
 
 TYPED_TEST(Storage, Insert) {
     using value_type = typename TestFixture::type;
-    using traits_type = entt::component_traits<value_type>;
+    using traits_type = entt::component_traits<value_type, entt::entity>;
     entt::storage<value_type> pool;
 
     const std::array entity{entt::entity{1}, entt::entity{3}};
@@ -847,7 +847,7 @@ TYPED_TEST(Storage, Insert) {
 
 TYPED_TEST(Storage, Erase) {
     using value_type = typename TestFixture::type;
-    using traits_type = entt::component_traits<value_type>;
+    using traits_type = entt::component_traits<value_type, entt::entity>;
     entt::storage<value_type> pool;
 
     const std::array entity{entt::entity{1}, entt::entity{3}, entt::entity{2}};
@@ -904,7 +904,7 @@ TYPED_TEST(Storage, CrossErase) {
 
 TYPED_TEST(Storage, Remove) {
     using value_type = typename TestFixture::type;
-    using traits_type = entt::component_traits<value_type>;
+    using traits_type = entt::component_traits<value_type, entt::entity>;
     entt::storage<value_type> pool;
 
     const std::array entity{entt::entity{1}, entt::entity{3}, entt::entity{2}};
@@ -964,7 +964,7 @@ TYPED_TEST(Storage, CrossRemove) {
 
 TYPED_TEST(Storage, Clear) {
     using value_type = typename TestFixture::type;
-    using traits_type = entt::component_traits<value_type>;
+    using traits_type = entt::component_traits<value_type, entt::entity>;
     entt::storage<value_type> pool;
 
     const std::array entity{entt::entity{1}, entt::entity{3}, entt::entity{2}};
@@ -989,7 +989,7 @@ TYPED_TEST(Storage, Clear) {
 
 TYPED_TEST(Storage, Compact) {
     using value_type = typename TestFixture::type;
-    using traits_type = entt::component_traits<value_type>;
+    using traits_type = entt::component_traits<value_type, entt::entity>;
     entt::storage<value_type> pool;
 
     ASSERT_TRUE(pool.empty());
@@ -1034,7 +1034,7 @@ TYPED_TEST(Storage, Compact) {
 
 TYPED_TEST(Storage, SwapElements) {
     using value_type = typename TestFixture::type;
-    using traits_type = entt::component_traits<value_type>;
+    using traits_type = entt::component_traits<value_type, entt::entity>;
     entt::storage<value_type> pool;
 
     pool.emplace(entt::entity{1}, 1);
@@ -1598,7 +1598,7 @@ ENTT_DEBUG_TEST(StorageDeathTest, NonMovableComponent) {
 
 TYPED_TEST(Storage, CanModifyDuringIteration) {
     using value_type = typename TestFixture::type;
-    using traits_type = entt::component_traits<value_type>;
+    using traits_type = entt::component_traits<value_type, entt::entity>;
     entt::storage<value_type> pool;
 
     auto *ptr = &pool.emplace(entt::entity{0}, 2);

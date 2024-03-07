@@ -38,7 +38,7 @@ struct page_size<Type, std::void_t<decltype(Type::page_size)>>
  * @brief Common way to access various properties of components.
  * @tparam Type Type of component.
  */
-template<typename Type, typename = void>
+template<typename Type, typename, typename = void>
 struct component_traits {
     static_assert(std::is_same_v<std::decay_t<Type>, Type>, "Unsupported type");
 
